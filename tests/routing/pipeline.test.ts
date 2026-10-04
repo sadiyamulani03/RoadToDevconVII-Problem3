@@ -105,7 +105,7 @@ describe('routeRequest pipeline (CHECK 1 + CHECK 2 + CHECK 7)', () => {
         {
           config: makeConfig(),
           ens: makeGatewayWith(downstream.url),
-          llm: new FakeLlmClient('{"agentId": "ghost-agent"}'),
+          llm: new FakeLlmClient('{"agentId": "totally-invented-agent"}'),
           logger,
         },
       );
@@ -119,7 +119,7 @@ describe('routeRequest pipeline (CHECK 1 + CHECK 2 + CHECK 7)', () => {
       expect(result.message).toContain('not discovered from ENS');
 
       // The rejected model choice is logged safely.
-      expect(logger.recorded[0]?.rejectedModelChoice).toBe('ghost-agent');
+      expect(logger.recorded[0]?.rejectedModelChoice).toBe('totally-invented-agent');
       expect(logger.recorded[0]?.finalStatus).toBe('routing_failed');
     } finally {
       await downstream.close();
@@ -287,6 +287,129 @@ describe('routeRequest pipeline (CHECK 1 + CHECK 2 + CHECK 7)', () => {
       logger: new FakeLogger(),
     });
     expect(notAnObject.status).toBe('invalid_request');
+  });
+
+  it('re-points forwarding when ENS metadata changes, with no router change (CHECK 2)', async () => {
+    const downstreamA = await startDownstreamServer();
+    const downstreamB = await startDownstreamServer();
+    try {
+      const gateway = new FakeEnsGateway();
+      gateway.setDirectory(['invoice-agent.test.eth']);
+      gateway.setAgentRecords(
+        'invoice-agent.test.eth',
+        makeRawRecords({ endpoint: downstreamA.url }),
+      );
+      const deps = {
+        config: makeConfig(),
+        ens: gateway,
+        llm: new FakeLlmClient('{"agentId": "invoice-specialist"}'),
+        logger: new FakeLogger(),
+      };
+
+      // ENS says example-a (the ephemeral downstream A): router calls exactly that URL.
+      const first = await routeRequest({ message: 'Which invoice is overdue?' }, deps);
+      expect(first.status).toBe('answered');
+      expect(downstreamA.requests).toHaveLength(1);
+      expect(downstreamA.requests[0]?.url).toBe(`${downstreamA.url}/invoke`);
+      expect(downstreamB.requests).toHaveLength(0);
+
+      // ENS metadata change ONLY — no router modification.
+      gateway.setAgentRecords(
+        'invoice-agent.test.eth',
+        makeRawRecords({ endpoint: downstreamB.url }),
+      );
+
+      const second = await routeRequest({ message: 'Which invoice is overdue?' }, deps);
+      expect(second.status).toBe('answered');
+      expect(downstreamB.requests).toHaveLength(1);
+      expect(downstreamB.requests[0]?.url).toBe(`${downstreamB.url}/invoke`);
+      expect(downstreamA.requests).toHaveLength(1);
+      expect(second.attribution?.endpoint).toBe(downstreamB.url);
+    } finally {
+      await downstreamA.close();
+      await downstreamB.close();
+    }
+  });
+
+  it('makes a dynamically added FOURTH agent routable with NO router change', async () => {
+    const downstreamA = await startDownstreamServer();
+    const downstreamD = await startDownstreamServer();
+    try {
+      const gateway = new FakeEnsGateway();
+      // Initial directory: A, B, C only.
+      gateway.setDirectory([
+        'invoice-agent.test.eth',
+        'brand-agent.test.eth',
+        'contract-agent.test.eth',
+      ]);
+      gateway.setAgentRecords(
+        'invoice-agent.test.eth',
+        makeRawRecords({ endpoint: downstreamA.url }),
+      );
+      gateway.setAgentRecords(
+        'brand-agent.test.eth',
+        makeRawRecords({
+          id: 'brand-specialist',
+          name: 'Brand Copy Agent',
+          description: 'Writes brand copy.',
+          capabilities: 'branding,copywriting',
+          endpoint: 'https://brand-agent.test.example',
+        }),
+      );
+      gateway.setAgentRecords(
+        'contract-agent.test.eth',
+        makeRawRecords({
+          id: 'contract-specialist',
+          name: 'Contract Specialist',
+          description: 'Explains contract clauses.',
+          capabilities: 'contracts,clauses',
+          endpoint: 'https://contract-agent.test.example',
+        }),
+      );
+
+      const deps = {
+        config: makeConfig(),
+        ens: gateway,
+        llm: new FakeLlmClient('{"agentId": "support-specialist"}'),
+        logger: new FakeLogger(),
+      };
+
+      // Before D exists: the model's choice is NOT in the discovered list — rejected.
+      const before = await routeRequest({ message: 'What is the refund policy?' }, deps);
+      expect(before.status).toBe('routing_failed');
+      expect(before.failureReason).toBe('model_selected_unknown_agent');
+      expect(downstreamD.requests).toHaveLength(0);
+
+      // Add D as a PURE ENS operation (directory + agent records) — zero code change.
+      gateway.setDirectory([
+        'invoice-agent.test.eth',
+        'brand-agent.test.eth',
+        'contract-agent.test.eth',
+        'support-agent.test.eth',
+      ]);
+      gateway.setAgentRecords(
+        'support-agent.test.eth',
+        makeRawRecords({
+          id: 'support-specialist',
+          name: 'Support Agent',
+          description: 'Answers customer support questions about tickets, refunds, and SLAs.',
+          capabilities: 'support,tickets,refunds',
+          endpoint: downstreamD.url,
+        }),
+      );
+
+      // D is now routable end-to-end.
+      const after = await routeRequest({ message: 'What is the refund policy?' }, deps);
+      expect(after.status).toBe('answered');
+      expect(after.attribution?.agentId).toBe('support-specialist');
+      expect(after.attribution?.ensName).toBe('support-agent.test.eth');
+      expect(downstreamD.requests).toHaveLength(1);
+      expect(downstreamD.requests[0]?.url).toBe(`${downstreamD.url}/invoke`);
+      expect(downstreamA.requests).toHaveLength(0);
+    } finally {
+      await downstreamA.close();
+      await downstreamD.close();
+    }
   });
 
   it('uses the TEST_DIRECTORY_NAME from config (no hardcoded agent set in router source)', async () => {

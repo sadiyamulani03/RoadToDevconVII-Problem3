@@ -1,0 +1,39 @@
+{
+  "name": "ens-ai-agent-router",
+  "version": "1.0.0",
+  "private": true,
+  "description": "ENS-based AI agent router for RoadToDevcon VII Problem 3: discovers specialist AI agents from live ENS text records on Sepolia and routes client requests through an LLM.",
+  "type": "module",
+  "engines": {
+    "node": ">=22.9.0"
+  },
+  "scripts": {
+    "dev": "tsx scripts/dev.ts",
+    "dev:router": "tsx --env-file-if-exists=.env src/server/main.ts",
+    "dev:agent:contract": "tsx --env-file-if-exists=.env agents/contract-agent.ts",
+    "dev:agent:brand": "tsx --env-file-if-exists=.env agents/brand-agent.ts",
+    "dev:agent:invoice": "tsx --env-file-if-exists=.env agents/invoice-agent.ts",
+    "build": "tsc -p tsconfig.build.json",
+    "start": "node --env-file-if-exists=.env dist/server/main.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc -p tsconfig.json",
+    "lint": "npm run typecheck",
+    "audit": "tsx scripts/audit.ts",
+    "secret:scan": "tsx scripts/secret-scan.ts",
+    "publish:agents": "tsx --env-file-if-exists=.env scripts/publish-agents.ts",
+    "verify": "npm run typecheck && npm run test && npm run audit && npm run secret:scan"
+  },
+  "dependencies": {
+    "@hono/node-server": "^2.1.3",
+    "hono": "^4.13.12",
+    "viem": "^2.57.2",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.3",
+    "vitest": "^5.0.3"
+  }
+}

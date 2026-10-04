@@ -1,0 +1,61 @@
+{
+  "description": "Recorded routing test cases for the ENS AI agent router (challenge CHECK 8). Every case specifies the client request and the expected agent id - or null, meaning no discovered agent is suitable and the router must return an explicit no_suitable_agent response.",
+  "expectedAgentsReference": "agent ids are the values published in the agent.id ENS text records (see docs/ENS_RECORD_FORMAT.md); null = no suitable agent",
+  "cases": [
+    {
+      "id": "contract-termination-01",
+      "request": "Can you explain the termination clause in this contract?",
+      "expectedAgent": "contract-specialist"
+    },
+    {
+      "id": "contract-liability-02",
+      "request": "What does the limitation of liability clause say about damages?",
+      "expectedAgent": "contract-specialist"
+    },
+    {
+      "id": "contract-indemnity-03",
+      "request": "Who defends us under the indemnification clause if a third party claims IP infringement?",
+      "expectedAgent": "contract-specialist"
+    },
+    {
+      "id": "brand-tagline-01",
+      "request": "Write a concise premium tagline for our design studio.",
+      "expectedAgent": "brand-specialist"
+    },
+    {
+      "id": "brand-product-02",
+      "request": "Write a product description for our new ceramic coffee cup line.",
+      "expectedAgent": "brand-specialist"
+    },
+    {
+      "id": "invoice-overdue-01",
+      "request": "Which invoice is overdue?",
+      "expectedAgent": "invoice-specialist"
+    },
+    {
+      "id": "invoice-payment-02",
+      "request": "What is the payment status of our invoices?",
+      "expectedAgent": "invoice-specialist"
+    },
+    {
+      "id": "invoice-billing-03",
+      "request": "How much do we still have outstanding in billing?",
+      "expectedAgent": "invoice-specialist"
+    },
+    {
+      "id": "unmatched-weather-01",
+      "request": "What's the weather in Mumbai tomorrow?",
+      "expectedAgent": null
+    },
+    {
+      "id": "unmatched-recipe-02",
+      "request": "Give me a recipe for a hydrangea cocktail syrup.",
+      "expectedAgent": null
+    },
+    {
+      "id": "unmatched-code-03",
+      "request": "Refactor this Python function to be async.",
+      "expectedAgent": null
+    }
+  ]
+}
