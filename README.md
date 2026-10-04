@@ -86,7 +86,8 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full module map and req
 ## Testing
 
 ```bash
-npm test        # vitest — 9 files, 84 tests
+npm test        # vitest — 10 files, 91 tests
 npm run audit   # static competition audit (all 9 checks)
 npm run build   # tsc -p tsconfig.build.json
+npm run verify:ens   # live Sepolia ENS verification (needs .env with SEPOLIA_RPC_URL + ENS_DIRECTORY_NAME)
 ```
