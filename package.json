@@ -22,6 +22,7 @@
     "audit": "tsx scripts/audit.ts",
     "secret:scan": "tsx scripts/secret-scan.ts",
     "publish:agents": "tsx --env-file-if-exists=.env scripts/publish-agents.ts",
+    "verify:ens": "tsx --env-file-if-exists=.env scripts/verify-ens.ts",
     "verify": "npm run typecheck && npm run test && npm run audit && npm run secret:scan"
   },
   "dependencies": {
